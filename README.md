@@ -32,8 +32,9 @@ pip install -r requirements.txt
 cp .env.example .env
 # Edit .env and add your OPENAI_API_KEY
 
-# 3. Add your documents to the documents/ folder
-#    Supported formats: PDF, DOCX, PPTX, HTML, etc.
+# 3. Create the documents folder and add your files
+mkdir -p documents
+#    Copy your files into it (supported: PDF, DOCX, PPTX, HTML, XLSX)
 cp /path/to/your/files documents/
 
 # 4. Convert documents to markdown
@@ -99,6 +100,9 @@ python run_eval.py --evaluate
 # Both in one step
 python run_eval.py --generate --evaluate
 
+# Async mode (faster — concurrent LLM calls)
+python run_eval.py --generate --evaluate --async
+
 # Custom number of questions per document
 python run_eval.py --generate --evaluate --num-questions 20
 ```
@@ -128,6 +132,11 @@ python run_eval.py --generate --evaluate --num-questions 20
 ├── run_eval.py               # Evaluation entry point
 ├── requirements.txt
 │
+├── documents/                # ⬅ Put your source files here (PDF, DOCX, PPTX, etc.)
+├── markdown_output/          # Converted markdown documents (auto-generated)
+├── vector_store/             # ChromaDB persistence (auto-created)
+├── eval_data/                # Evaluation datasets and reports
+│
 ├── rag/                      # Core RAG modules
 │   ├── chunker.py            # Hierarchical markdown chunker
 │   ├── embeddings.py         # OpenAI embeddings wrapper
@@ -136,14 +145,10 @@ python run_eval.py --generate --evaluate --num-questions 20
 │   ├── generator.py          # Citation-grounded answer generator
 │   └── pipeline.py           # Pipeline orchestrator
 │
-├── eval/                     # Evaluation framework
-│   ├── generate_eval_data.py # Synthetic Q&A dataset generation
-│   ├── metrics.py            # Retrieval & answer quality metrics
-│   └── evaluator.py          # Full evaluation harness
-│
-├── markdown_output/          # Converted markdown documents
-├── vector_store/             # ChromaDB persistence (auto-created)
-└── eval_data/                # Evaluation datasets and reports
+└── eval/                     # Evaluation framework
+    ├── generate_eval_data.py # Synthetic Q&A dataset generation
+    ├── metrics.py            # Retrieval & answer quality metrics
+    └── evaluator.py          # Full evaluation harness
 ```
 
 ## Configuration
