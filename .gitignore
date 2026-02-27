@@ -1,6 +1,6 @@
 */markdown_output/*
 *.env
-*/documents/*
+documents/*
 *.log
 *.txt
 *.csv
