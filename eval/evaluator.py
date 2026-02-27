@@ -8,11 +8,13 @@ producing a detailed JSON report and summary statistics.
 from __future__ import annotations
 
 import asyncio
+import csv
 import json
 import logging
 import sys
 import time
 from dataclasses import dataclass, field
+from datetime import datetime
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
@@ -40,6 +42,7 @@ class EvalResult:
     question: str
     ground_truth: str
     generated_answer: str
+    source_file: str
     difficulty: str
     question_type: str
 
@@ -70,6 +73,7 @@ class EvalResult:
             "question": self.question,
             "ground_truth": self.ground_truth,
             "generated_answer": self.generated_answer,
+            "source_file": self.source_file,
             "difficulty": self.difficulty,
             "question_type": self.question_type,
             "retrieval_metrics": {
@@ -99,6 +103,59 @@ class EvalResult:
             "latency_seconds": self.latency_seconds,
         }
 
+    @staticmethod
+    def csv_header() -> list[str]:
+        return [
+            "question",
+            "ground_truth",
+            "generated_answer",
+            "source_file",
+            "difficulty",
+            "question_type",
+            "context_precision",
+            "context_recall",
+            "hit_rate",
+            "mrr",
+            "faithfulness",
+            "faithfulness_explanation",
+            "answer_relevance",
+            "relevance_explanation",
+            "correctness",
+            "correctness_explanation",
+            "retrieved_chunk_ids",
+            "retrieved_chunk_texts",
+            "actual_chunk_ids",
+            "actual_chunk_texts",
+            "latency_seconds",
+        ]
+
+    def to_csv_row(self) -> list[str]:
+        """Flatten EvalResult into a list of strings for CSV export."""
+        sep = "\n---\n"
+        return [
+            self.question,
+            self.ground_truth,
+            self.generated_answer,
+            self.source_file,
+            self.difficulty,
+            self.question_type,
+            f"{self.context_precision:.4f}",
+            f"{self.context_recall:.4f}",
+            f"{self.hit_rate:.4f}",
+            f"{self.mrr:.4f}",
+            f"{self.faithfulness:.4f}",
+            self.faithfulness_detail.get("explanation", ""),
+            f"{self.answer_relevance:.4f}",
+            self.relevance_detail.get("explanation", ""),
+            f"{self.correctness:.4f}",
+            self.correctness_detail.get("explanation", ""),
+            sep.join(self.sources_retrieved),
+            sep.join(self.retrieved_chunk_texts),
+            sep.join(self.actual_chunk_ids),
+            sep.join(self.actual_chunk_texts),
+            f"{self.latency_seconds:.3f}",
+        ]
+
 
 class RAGEvaluator:
     """Evaluates a RAG pipeline against a ground truth dataset."""
@@ -125,7 +182,9 @@ class RAGEvaluator:
             Summary dict with aggregate metrics.
         """
         eval_dataset_path = eval_dataset_path or (self.config.paths.eval_dir / "eval_dataset.json")
-        output_path = output_path or (self.config.paths.eval_dir / "eval_report.json")
+        if output_path is None:
+            ts = datetime.now().strftime("%Y%m%d_%H%M%S")
+            output_path = self.config.paths.eval_dir / f"eval_report_{ts}.json"
 
         if not eval_dataset_path.exists():
             raise FileNotFoundError(
@@ -175,6 +234,7 @@ class RAGEvaluator:
             question=question,
             ground_truth=ground_truth,
             generated_answer=answer,
+            source_file=item.get("source_file", "unknown"),
             difficulty=item.get("difficulty", "unknown"),
             question_type=item.get("question_type", "unknown"),
             sources_retrieved=retrieved_ids,
@@ -227,7 +287,9 @@ class RAGEvaluator:
             Summary dict with aggregate metrics.
         """
         eval_dataset_path = eval_dataset_path or (self.config.paths.eval_dir / "eval_dataset.json")
-        output_path = output_path or (self.config.paths.eval_dir / "eval_report.json")
+        if output_path is None:
+            ts = datetime.now().strftime("%Y%m%d_%H%M%S")
+            output_path = self.config.paths.eval_dir / f"eval_report_{ts}.json"
 
         if not eval_dataset_path.exists():
             raise FileNotFoundError(
@@ -285,6 +347,7 @@ class RAGEvaluator:
                 question=question,
                 ground_truth=ground_truth,
                 generated_answer=answer,
+                source_file=item.get("source_file", "unknown"),
                 difficulty=item.get("difficulty", "unknown"),
                 question_type=item.get("question_type", "unknown"),
                 sources_retrieved=retrieved_ids,
@@ -369,7 +432,7 @@ class RAGEvaluator:
     def _build_and_save_report(
         self, results: list[EvalResult], output_path: Path
     ) -> dict:
-        """Compute summary, save full report, print summary."""
+        """Compute summary, save full report (JSON + CSV), print summary."""
         summary = self._compute_summary(results)
 
         report = {
@@ -380,8 +443,23 @@ class RAGEvaluator:
         output_path.write_text(json.dumps(report, indent=2, ensure_ascii=False), encoding="utf-8")
         print(f"\nFull report saved to {output_path}")
 
+        # Export CSV alongside the JSON report
+        csv_path = output_path.with_suffix(".csv")
+        self._export_csv(results, csv_path)
+
         self._print_summary(summary)
         return summary
+
+    @staticmethod
+    def _export_csv(results: list[EvalResult], csv_path: Path) -> None:
+        """Export evaluation results to a CSV file for easy analysis."""
+        csv_path.parent.mkdir(parents=True, exist_ok=True)
+        with open(csv_path, "w", newline="", encoding="utf-8") as f:
+            writer = csv.writer(f)
+            writer.writerow(EvalResult.csv_header())
+            for result in results:
+                writer.writerow(result.to_csv_row())
+        print(f"CSV report saved to {csv_path}")
 
     @staticmethod
     def _compute_summary(results: list[EvalResult]) -> dict:
