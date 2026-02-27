@@ -183,6 +183,12 @@ class EvalDataGenerator:
         output_path = output_path or (self.config.paths.eval_dir / "eval_dataset.json")
         output_path.parent.mkdir(parents=True, exist_ok=True)
 
+        # Clear old eval dataset if it exists
+        if output_path.exists():
+            logger.info(f"Clearing old eval dataset: {output_path}")
+            print(f"Clearing old eval dataset: {output_path}")
+            output_path.unlink()
+
         print(f"Chunking documents from {source_dir}...")
         all_chunks = self.chunker.chunk_directory(source_dir)
 

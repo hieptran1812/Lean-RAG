@@ -44,19 +44,23 @@ class RAGPipeline:
 
     # ── Ingestion ──────────────────────────────────────────────────────
 
-    def ingest(self, source_dir: Path | None = None) -> int:
+    def ingest(self, source_dir: Path | None = None, reset: bool = False) -> int:
         """
         Ingest markdown documents into the vector store.
 
-        Clears existing chunks before storing new ones to avoid duplicates.
-
         Args:
             source_dir: Directory containing .md files (defaults to config)
+            reset: If True, clear all existing chunks before ingesting.
 
         Returns:
             Number of chunks ingested
         """
         source_dir = source_dir or self.config.paths.markdown_dir
+
+        if reset:
+            print("Clearing existing chunks from vector store...")
+            self.vector_store.reset()
+            logger.info("Vector store cleared before ingestion")
 
         print(f"Chunking documents from {source_dir}...")
         chunks = self.chunker.chunk_directory(source_dir)
@@ -64,10 +68,6 @@ class RAGPipeline:
         if not chunks:
             print("No chunks produced. Check your markdown files.")
             return 0
-
-        # Always clear old chunks before storing new ones to avoid duplicates
-        self.vector_store.reset()
-        logger.info("Vector store cleared before ingestion")
 
         print(f"Embedding {len(chunks)} chunks...")
         texts = [c.text for c in chunks]

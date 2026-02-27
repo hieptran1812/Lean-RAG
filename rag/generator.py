@@ -85,6 +85,7 @@ class AnswerGenerator:
                     "section": meta.get("section_hierarchy", ""),
                     "chunk_id": chunk.get("chunk_id", ""),
                     "score": chunk.get("score", chunk.get("rrf_score", 0)),
+                    "text": chunk.get("text", ""),
                 }
             )
 
@@ -158,6 +159,7 @@ class AnswerGenerator:
                     "section": meta.get("section_hierarchy", ""),
                     "chunk_id": chunk.get("chunk_id", ""),
                     "score": chunk.get("score", chunk.get("rrf_score", 0)),
+                    "text": chunk.get("text", ""),
                 }
             )
 

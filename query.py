@@ -185,7 +185,7 @@ def _print_result(result: dict):
     sources = result.get("sources", [])
     if sources:
         print(f"\n{YELLOW}{BOLD}Sources:{RESET}")
-        for s in sources:
+        for idx, s in enumerate(sources, 1):
             score = s.get("score", 0)
             # Color score based on value
             if score >= 0.7:
@@ -195,9 +195,14 @@ def _print_result(result: dict):
             else:
                 score_color = MAGENTA
             print(
-                f"  {CYAN}-{RESET} {s['source_file']} {DIM}|{RESET} "
+                f"\n  {CYAN}[{idx}]{RESET} {s['source_file']} {DIM}|{RESET} "
                 f"{s['section']} {DIM}(score: {RESET}{score_color}{score:.3f}{RESET}{DIM}){RESET}"
             )
+            text = s.get("text", "")
+            if text:
+                print(f"{DIM}{'─' * 40}{RESET}")
+                print(f"  {DIM}{text}{RESET}")
+                print(f"{DIM}{'─' * 40}{RESET}")
 
     usage = result.get("usage", {})
     if usage:
