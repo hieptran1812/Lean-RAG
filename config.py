@@ -38,7 +38,7 @@ class EmbeddingConfig:
     """OpenAI embedding parameters."""
 
     model: str = "text-embedding-3-large"
-    dimensions: int = 1536  # Reduced from 3072 for cost/speed balance
+    dimensions: int = 3072
     batch_size: int = 100
 
 
